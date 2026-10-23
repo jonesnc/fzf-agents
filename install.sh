@@ -22,23 +22,22 @@ case ":$PATH:" in
     *) echo "note: $bin_dir is not on your PATH; add it so the widget can find fzf-agents" ;;
 esac
 
-# Wire the Ctrl+Alt+C widget into every installed shell. Idempotent; set
-# FZF_AGENTS_NO_SHELL=1 to skip.
-add_line() { # file line
-    mkdir -p "$(dirname "$1")"
-    if ! grep -qsF "$2" "$1"; then
-        printf '\n%s\n' "$2" >>"$1"
-        echo "added widget to $1"
+# Wire the Ctrl+Alt+C widget into every installed shell, unless the shell's
+# config already runs `fzf-agents init`. Set FZF_AGENTS_NO_SHELL=1 to skip.
+add_line() { # shell file line [search-path]
+    if grep -rqsF "fzf-agents init $1" "${4:-$2}"; then
+        echo "$1: widget already set up"
+        return
     fi
+    mkdir -p "$(dirname "$2")"
+    printf '\n%s\n' "$3" >>"$2"
+    echo "$1: added widget to $2"
 }
 if [ -z "${FZF_AGENTS_NO_SHELL:-}" ]; then
-    if command -v fish >/dev/null; then
-        conf="${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/fzf-agents.fish"
-        mkdir -p "$(dirname "$conf")"
-        printf '%s\n' 'status is-interactive; and fzf-agents init fish | source' >"$conf"
-        echo "added widget to $conf"
-    fi
-    command -v bash >/dev/null && add_line "$HOME/.bashrc" 'eval "$(fzf-agents init bash)"'
-    command -v zsh >/dev/null && add_line "${ZDOTDIR:-$HOME}/.zshrc" 'eval "$(fzf-agents init zsh)"'
+    fish_dir="${XDG_CONFIG_HOME:-$HOME/.config}/fish"
+    command -v fish >/dev/null && add_line fish "$fish_dir/conf.d/fzf-agents.fish" \
+        'status is-interactive; and fzf-agents init fish | source' "$fish_dir"
+    command -v bash >/dev/null && add_line bash "$HOME/.bashrc" 'eval "$(fzf-agents init bash)"'
+    command -v zsh >/dev/null && add_line zsh "${ZDOTDIR:-$HOME}/.zshrc" 'eval "$(fzf-agents init zsh)"'
     echo "open a new shell and press Ctrl+Alt+C"
 fi
