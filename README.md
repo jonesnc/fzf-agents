@@ -12,7 +12,7 @@ Requires [fzf](https://github.com/junegunn/fzf) 0.45+.
 curl -fsSL https://github.com/jonesnc/fzf-agents/releases/latest/download/install.sh | sh
 ```
 
-Prebuilt binaries: Linux amd64/arm64, macOS arm64. Then add the widget to your shell:
+Prebuilt binaries: Linux amd64/arm64, macOS arm64. The installer also adds the Ctrl+Alt+C widget to every shell it finds (fish, bash, zsh); it is safe to rerun. Set `FZF_AGENTS_NO_SHELL=1` to skip that and wire it up by hand:
 
 | Shell | Add to config |
 |---|---|
