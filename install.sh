@@ -17,10 +17,28 @@ curl -fsSL "$url" | tar xz -C "$bin_dir" fzf-agents
 echo "installed $bin_dir/fzf-agents"
 command -v fzf >/dev/null || echo "note: fzf not found; install it first (https://github.com/junegunn/fzf)"
 
-cat <<'MSG'
+case ":$PATH:" in
+    *":$bin_dir:"*) ;;
+    *) echo "note: $bin_dir is not on your PATH; add it so the widget can find fzf-agents" ;;
+esac
 
-Add the Ctrl+Alt+C widget to your shell:
-  fish:  echo 'fzf-agents init fish | source' >> ~/.config/fish/config.fish
-  bash:  echo 'eval "$(fzf-agents init bash)"' >> ~/.bashrc
-  zsh:   echo 'eval "$(fzf-agents init zsh)"' >> ~/.zshrc
-MSG
+# Wire the Ctrl+Alt+C widget into every installed shell. Idempotent; set
+# FZF_AGENTS_NO_SHELL=1 to skip.
+add_line() { # file line
+    mkdir -p "$(dirname "$1")"
+    if ! grep -qsF "$2" "$1"; then
+        printf '\n%s\n' "$2" >>"$1"
+        echo "added widget to $1"
+    fi
+}
+if [ -z "${FZF_AGENTS_NO_SHELL:-}" ]; then
+    if command -v fish >/dev/null; then
+        conf="${XDG_CONFIG_HOME:-$HOME/.config}/fish/conf.d/fzf-agents.fish"
+        mkdir -p "$(dirname "$conf")"
+        printf '%s\n' 'status is-interactive; and fzf-agents init fish | source' >"$conf"
+        echo "added widget to $conf"
+    fi
+    command -v bash >/dev/null && add_line "$HOME/.bashrc" 'eval "$(fzf-agents init bash)"'
+    command -v zsh >/dev/null && add_line "${ZDOTDIR:-$HOME}/.zshrc" 'eval "$(fzf-agents init zsh)"'
+    echo "open a new shell and press Ctrl+Alt+C"
+fi
