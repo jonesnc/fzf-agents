@@ -1,0 +1,54 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+env:
+  ODIN_TAG: dev-2026-10
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-22.04, target: linux-amd64 }
+          - { os: ubuntu-22.04-arm, target: linux-arm64 }
+          - { os: macos-14, target: macos-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Odin
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$ODIN_TAG" -R odin-lang/Odin \
+            -p "odin-${{ matrix.target }}-$ODIN_TAG.tar.gz" -O odin.tgz
+          mkdir odin && tar xzf odin.tgz -C odin --strip-components=1
+          echo "$PWD/odin" >> "$GITHUB_PATH"
+      - name: Build
+        run: |
+          odin build . -o:speed -out:fzf-agents
+          tar czf "fzf-agents-${{ matrix.target }}.tar.gz" fzf-agents
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: fzf-agents-${{ matrix.target }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --generate-notes \
+            fzf-agents-*.tar.gz install.sh
